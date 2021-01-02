@@ -33,8 +33,8 @@ router.post("/addStore", (req, res) => {
   });
 });
 
-router.put("/updateStore/:id", (req, res) => {
-  var store_id = req.params.id;
+router.put("/updateStore", (req, res) => {
+  var store_id = req.body.id;
   let update = {
     name: req.body.name,
     address: req.body.address,
