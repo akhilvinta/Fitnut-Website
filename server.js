@@ -16,13 +16,8 @@ mongoose.connect(
     useMongoClient: true,
   }
 );
-app.use("/api/stores", require("./routes"));
-app.get("/", (req, res) => {
-  res.send("FitNut mainpage");
-});
-app.get("/*", (req, res) => {
-  res.status(404).send("404: Page not found");
-});
+app.use("/", require("./routes"));
+
 
 var server = app.listen(parseInt(PORT), () =>
   console.log(`server started on ${PORT}`)

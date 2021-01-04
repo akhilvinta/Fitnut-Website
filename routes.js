@@ -1,6 +1,10 @@
-const router = require('express').Router();
+const router = require("express").Router();
 const mongoose = require("mongoose");
 const Store = require("./models/store_model");
+
+router.get("/", (req, res) => {
+  res.send("FitNut mainpage");
+});
 
 router.get("/getStores", (req, res) => {
   Store.find({}, (err, stores) => {
@@ -56,7 +60,7 @@ router.put("/updateStore", (req, res) => {
           console.log(`${key}: ${value}`);
           if (key == "name") {
             found_store.name = req.body.name;
-          }else if (key == "address") {
+          } else if (key == "address") {
             found_store.zip = req.body.address;
           } else if (key == "zip") {
             found_store.zip = parseInt(req.body.zip);
@@ -95,6 +99,10 @@ router.delete("/removeStore/:id", (req, res) => {
       res.status(200).send(`Deleted store with id: ${store_id}`);
     }
   });
+});
+
+router.get("/*", (req, res) => {
+  res.status(404).send("404: Page not found");
 });
 
 module.exports = router;
