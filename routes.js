@@ -2,6 +2,54 @@ const router = require("express").Router();
 const mongoose = require("mongoose");
 const Store = require("./models/store_model");
 
+function add_diff(arr1, arr2) {
+  if(arr1.length==0){
+    return;
+  }
+  temp = [];
+  arr1.forEach((s) => {
+    result = arr2.every((farray) =>
+      farray.every((fs) => {
+        return fs._id.toString() != s._id.toString();
+      })
+    );
+    if (result) {
+      temp.push(s);
+    }
+  });
+  arr2.push(temp);
+}
+
+function filter_stores(docs, filters_obj) {
+  arr = [];
+  docs.map((x) => arr.push(x.toObject()));
+  filters = Object.entries(filters_obj);
+  filtered_stores = [];
+
+  while (filters.length != 0) {
+    temp = [];
+    arr.map((d) => {
+      d_array = Object.entries(d);
+      result= filters.every((f) => {
+        index_key = Object.keys(d).indexOf(f[0]);
+        if (index_key && d_array[index_key][1] === f[1]) {          
+          return temp.every((t) => t._id.toString() != d._id.toString());
+        }
+      });
+      console.log(d.name,result)
+      if(result){
+        temp.push(d);
+      }
+    });
+    
+      add_diff(temp, filtered_stores);
+        
+    filters.pop();
+  }
+  add_diff(arr, filtered_stores);
+  return filter_stores;
+}
+
 router.get("/", (req, res) => {
   res.send("FitNut mainpage");
 });
@@ -11,6 +59,11 @@ router.get("/getStores", (req, res) => {
     if (err) {
       res.status(404).send(err);
     } else {
+      filter_obj = {
+        cost: "low",
+        zip:"1234"
+      };
+      //filter_stores(stores, filter_obj);
       res.status(200).send(stores);
     }
   });
@@ -61,11 +114,11 @@ router.put("/updateStore", (req, res) => {
           if (key == "name") {
             found_store.name = req.body.name;
           } else if (key == "address") {
-            found_store.zip = req.body.address;
+            found_store.address = req.body.address;
           } else if (key == "zip") {
             found_store.zip = parseInt(req.body.zip);
           } else if (key == "city") {
-            found_store.city = req.body.cost;
+            found_store.city = req.body.city;
           } else if (key == "cost") {
             found_store.cost = req.body.cost;
           } else if (key == "link") {
