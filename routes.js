@@ -1,6 +1,5 @@
 const router = require("express").Router();
 const mongoose = require("mongoose");
-const { count } = require("./models/store_model");
 const Store = require("./models/store_model");
 
 function get_ten_stores(all_stores, results, num) {
@@ -160,6 +159,16 @@ router.get("/getStores", (req, res) => {
     }
   });
 });
+
+router.get("/getAllStores", (req, res) => {
+  Store.find({}, (err, all_stores) => {
+    if (err) {
+      res.status(404).send(err);
+    } else {
+      res.status(200).send(all_stores);
+    }
+  });
+})
 
 router.post("/addStore", (req, res) => {
   let new_id = new mongoose.Types.ObjectId();
