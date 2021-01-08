@@ -1,53 +1,115 @@
 const router = require("express").Router();
 const mongoose = require("mongoose");
+const { count } = require("./models/store_model");
 const Store = require("./models/store_model");
 
-function add_diff(arr1, arr2) {
-  if(arr1.length==0){
-    return;
-  }
-  temp = [];
-  arr1.forEach((s) => {
-    result = arr2.every((farray) =>
-      farray.every((fs) => {
-        return fs._id.toString() != s._id.toString();
+function get_ten_stores(all_stores, results, num) {
+  all_stores.forEach((val, index) => {
+    if (index < 10) {
+
+      exists = results.every(s => {
+        return val._id.toString() != s._id.toString();
       })
-    );
-    if (result) {
-      temp.push(s);
+      if (exists) {
+        results.push(val);
+      }
     }
-  });
-  arr2.push(temp);
+  })
 }
 
-function filter_stores(docs, filters_obj) {
-  arr = [];
-  docs.map((x) => arr.push(x.toObject()));
-  filters = Object.entries(filters_obj);
-  filtered_stores = [];
+function add_diff(arr1, arr2, num) {
+  if (arr1.length == 0) {
+    return arr2;
+  }
+  temp = [];
+  arr1.forEach((s, index) => {
+    exists = arr2.every((fs) => {
+      return fs._id.toString() != s._id.toString();
+    });
+    if (exists) {
+      if (num != null && index <= num) {
+        temp.push(s);
+      } else {
+        temp.push(s);
+      }
 
-  while (filters.length != 0) {
+    }
+  });
+  return arr2.concat(temp);
+}
+
+function filter_stores(docs, filters, mongo) {
+  filters_entries = Object.entries(filters);
+  filtered_stores = [];
+  arr = [];
+  docs.map((x) => {
+    if (mongo) {
+      arr.push(x.toObject())
+    } else {
+      arr.push(x)
+    }
+  });
+
+  while (filters_entries.length != 0) {
     temp = [];
     arr.map((d) => {
       d_array = Object.entries(d);
-      result= filters.every((f) => {
+      result = filters_entries.every((f) => {
         index_key = Object.keys(d).indexOf(f[0]);
-        if (index_key && d_array[index_key][1] === f[1]) {          
+        if (index_key && d_array[index_key][1] === f[1]) {
           return temp.every((t) => t._id.toString() != d._id.toString());
         }
       });
-      console.log(d.name,result)
-      if(result){
+      if (result) {
         temp.push(d);
       }
     });
-    
-      add_diff(temp, filtered_stores);
-        
-    filters.pop();
+    if (temp.length) {
+      filtered_stores = add_diff(temp, filtered_stores);
+    }
+    filters_entries.pop();
   }
-  add_diff(arr, filtered_stores);
-  return filter_stores;
+  return filtered_stores;
+}
+
+function search_stores(docs, search_string) {
+  words = search_string.split(" ");
+  search_results = [];
+  var count = [];
+  arr = [];
+  docs.map((x) => arr.push(x.toObject()));
+  for (i = 0; i < arr.length; i++) {
+    count[i] = [0, arr[i]];
+  }
+
+  words.forEach(word => {
+    for (i = 0; i < count.length; i++) {
+      vals = Object.values(count[i][1]);
+      c = 0;
+      vals.forEach(val => {
+        val = val.toString();
+        field_words = val.split(" ");
+        field_words.forEach(fd => {
+          if (fd.toUpperCase().includes(word.toUpperCase())) {
+            c++;
+          }
+        })
+      })
+      count[i][0] += c;
+    }
+  })
+
+  count.sort((a, b) => {
+    return b[0] - a[0];
+  })
+
+  count.forEach((val, index) => {
+
+    if (index < 10 && val[0] > 0) {
+      search_results.push(val[1])
+    }
+  })
+  return search_results;
 }
 
 router.get("/", (req, res) => {
@@ -55,16 +117,46 @@ router.get("/", (req, res) => {
 });
 
 router.get("/getStores", (req, res) => {
-  Store.find({}, (err, stores) => {
+  Store.find({}, (err, all_stores) => {
     if (err) {
       res.status(404).send(err);
     } else {
-      filter_obj = {
-        cost: "low",
-        zip:"1234"
-      };
-      //filter_stores(stores, filter_obj);
-      res.status(200).send(stores);
+      search_string = req.body.search;
+      filters = req.body.filters;
+      results = [];
+      console.log('filters', filters);
+
+      if (search_string && filters != null && Object.keys(filters).length) {
+        max = 0;
+        //search+filter
+        search_results = search_stores(all_stores, search_string);
+        results = filter_stores(search_results, filters, false);
+        max = results.length;
+        if (max < 10) {
+          //only search
+          results = add_diff(search_results, results, 10 - max);
+          max = results.length;
+          if (max < 10) {
+            //only filter
+            only_filter = filter_stores(all_stores, filters, true);
+
+            results = add_diff(only_filter, results, 10 - max)
+            max = results.length;
+          }
+        }
+        if (max < 10) {
+          get_ten_stores(all_stores, results, 10 - max)
+        }
+      } else if (search_string) {
+        results = search_stores(all_stores, search_string);
+        get_ten_stores(all_stores, results, 10 - results.length)
+      } else if (filters != null && Object.keys(filters).length) {
+        results = filter_stores(all_stores, filters, true);
+        get_ten_stores(all_stores, results, 10 - results.length)
+      } else {
+        get_ten_stores(all_stores, results);
+      }
+      res.status(200).send(results);
     }
   });
 });
@@ -110,7 +202,6 @@ router.put("/updateStore", (req, res) => {
     } else if (changes) {
       for (let [key, value] of Object.entries(update)) {
         if (typeof value !== "undefined") {
-          console.log(`${key}: ${value}`);
           if (key == "name") {
             found_store.name = req.body.name;
           } else if (key == "address") {
