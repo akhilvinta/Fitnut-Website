@@ -5,7 +5,6 @@ const Store = require("./models/store_model");
 function get_ten_stores(all_stores, results, num) {
   all_stores.forEach((val, index) => {
     if (index < 10) {
-
       exists = results.every(s => {
         return val._id.toString() != s._id.toString();
       })
@@ -53,19 +52,28 @@ function filter_stores(docs, filters, mongo) {
     temp = [];
     arr.map((d) => {
       d_array = Object.entries(d);
-      result = filters_entries.every((f) => {
+      match = filters_entries.every((f) => {
+        present = false
         index_key = Object.keys(d).indexOf(f[0]);
-        if (index_key && d_array[index_key][1] === f[1]) {
-          return temp.every((t) => t._id.toString() != d._id.toString());
-        }
+        filter_arr = f[1];
+        filter_arr.forEach(fe => {
+          if (index_key && d_array[index_key][1] === fe) {
+            present = true;
+          }
+        })
+        return present;
       });
-      if (result) {
+
+      no_duplicate = temp.every((t) => {
+        return t._id.toString() != d._id.toString()
+      });
+
+      if (match && no_duplicate) {
         temp.push(d);
       }
     });
-    if (temp.length) {
-      filtered_stores = add_diff(temp, filtered_stores);
-    }
+
+    filtered_stores = add_diff(temp, filtered_stores);
     filters_entries.pop();
   }
   return filtered_stores;
@@ -123,7 +131,6 @@ router.get("/getStores", (req, res) => {
       search_string = req.body.search;
       filters = req.body.filters;
       results = [];
-      console.log('filters', filters);
 
       if (search_string && filters != null && Object.keys(filters).length) {
         max = 0;
@@ -138,7 +145,6 @@ router.get("/getStores", (req, res) => {
           if (max < 10) {
             //only filter
             only_filter = filter_stores(all_stores, filters, true);
-
             results = add_diff(only_filter, results, 10 - max)
             max = results.length;
           }
@@ -148,10 +154,15 @@ router.get("/getStores", (req, res) => {
         }
       } else if (search_string) {
         results = search_stores(all_stores, search_string);
-        get_ten_stores(all_stores, results, 10 - results.length)
+        if (results.length < 10) {
+          get_ten_stores(all_stores, results, 10 - results.length)
+        }
       } else if (filters != null && Object.keys(filters).length) {
         results = filter_stores(all_stores, filters, true);
-        get_ten_stores(all_stores, results, 10 - results.length)
+        
+        if (results.length < 10) {
+          get_ten_stores(all_stores, results, 10 - results.length)
+        }
       } else {
         get_ten_stores(all_stores, results);
       }
