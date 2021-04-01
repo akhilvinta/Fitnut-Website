@@ -52,14 +52,21 @@ function filter_stores(docs, filters, mongo) {
     temp = [];
     arr.map((d) => {
       d_array = Object.entries(d);
+
       match = filters_entries.every((f) => {
-        present = false
         index_key = Object.keys(d).indexOf(f[0]);
         filter_arr = f[1];
-        filter_arr.forEach(fe => {
-          if (index_key && d_array[index_key][1] === fe) {
-            present = true;
+
+        present = filter_arr.every(fe => {
+          if (index_key >= 0 && typeof d_array[index_key][1] === "object") {
+            category_arr = d_array[index_key][1];
+            return category_arr.includes(fe);
+
           }
+          else if (index_key >= 0 && d_array[index_key][1] === fe) {
+            return true;
+          }
+          return false;
         })
         return present;
       });
@@ -94,9 +101,12 @@ function search_stores(docs, search_string) {
       vals = Object.values(count[i][1]);
       c = 0;
       vals.forEach(val => {
+        if (typeof val === "object")
+          return;
         val = val.toString();
         field_words = val.split(" ");
         field_words.forEach(fd => {
+
           if (fd.toUpperCase().includes(word.toUpperCase())) {
             c++;
           }
@@ -118,14 +128,6 @@ function search_stores(docs, search_string) {
   })
   return search_results;
 }
-
-router.get("/", (req, res) => {
-  res.send("FitNut mainpage");
-});
-
-router.get("/*", (req, res) => {
-  res.status(404).send("404: Page not found");
-});
 
 router.get("/getStores", (req, res) => {
   Store.find({}, (err, all_stores) => {
@@ -281,4 +283,11 @@ router.delete("/removeStore/:id", (req, res) => {
   });
 });
 
+router.get("/", (req, res) => {
+  res.send("FitNut mainpage");
+});
+
+router.get("/*", (req, res) => {
+  res.status(404).send("404: Page not found");
+});
 module.exports = router;

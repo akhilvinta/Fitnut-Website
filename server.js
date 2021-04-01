@@ -33,6 +33,7 @@ const connectToDB = async () => {
 var server = app.listen(parseInt(PORT), () =>
   console.log(`Server started on ${PORT}`)
 );
+
 connectToDB();
 
 process.on("exit" || "uncaughtException" || "SIGTERM", () => {
