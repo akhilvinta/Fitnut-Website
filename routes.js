@@ -123,6 +123,10 @@ router.get("/", (req, res) => {
   res.send("FitNut mainpage");
 });
 
+router.get("/*", (req, res) => {
+  res.status(404).send("404: Page not found");
+});
+
 router.get("/getStores", (req, res) => {
   Store.find({}, (err, all_stores) => {
     if (err) {
@@ -159,7 +163,7 @@ router.get("/getStores", (req, res) => {
         }
       } else if (filters != null && Object.keys(filters).length) {
         results = filter_stores(all_stores, filters, true);
-        
+
         if (results.length < 10) {
           get_ten_stores(all_stores, results, 10 - results.length)
         }
@@ -192,12 +196,15 @@ router.post("/addStore", (req, res) => {
     cost: req.body.cost,
     link: req.body.link,
     desc: req.body.desc,
+    hours: req.body.hours,
+    category: req.body.category,
   });
+
   NewStore.save((err, doc) => {
     if (err) {
       return res.status(400).send("Cannot save store", err);
     } else {
-      res.status(200).send(`New store with id: ${new_id} created`);
+      return res.status(200).send(`New store with id: ${new_id} created`);
     }
   });
 });
@@ -212,11 +219,16 @@ router.put("/updateStore", (req, res) => {
     cost: req.body.cost,
     link: req.body.link,
     desc: req.body.desc,
+    hours: req.body.hours,
+    category: req.body.category,
   };
 
   let changes = !Object.values(update).every((m) => m === null);
 
-  Store.findById(store_id, (err, found_store) => {
+  Store.findById(store_id, async (err, found_store) => {
+    if (err) {
+      return res.status(400).send(err);
+    }
     if (!found_store) {
       return res.status(404).send("Store not found");
     } else if (changes) {
@@ -236,6 +248,10 @@ router.put("/updateStore", (req, res) => {
             found_store.link = req.body.link;
           } else if (key == "desc") {
             found_store.desc = req.body.desc;
+          } else if (key == "hours") {
+            found_store.desc = req.body.hours;
+          } else if (key == "category") {
+            found_store.desc = req.body.category;
           }
         }
       }
@@ -263,10 +279,6 @@ router.delete("/removeStore/:id", (req, res) => {
       res.status(200).send(`Deleted store with id: ${store_id}`);
     }
   });
-});
-
-router.get("/*", (req, res) => {
-  res.status(404).send("404: Page not found");
 });
 
 module.exports = router;

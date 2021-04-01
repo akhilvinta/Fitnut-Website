@@ -8,8 +8,14 @@ const store_schema = new mongoose.Schema({
     city: String,
     cost: String,
     link: String,
-    desc: String
+    desc: String,
+    category: {
+        type: [String]
+    },
+    hours: {
+        type: [String]
+    }
 });
 
-module.exports = mongoose.model('StoreModel', store_schema,'Stores');
+module.exports = mongoose.model('StoreModel', store_schema, 'Stores');
 
